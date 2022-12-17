@@ -1,4 +1,4 @@
-module logger
+module github.com/jwping/logger
 
 go 1.19
 
