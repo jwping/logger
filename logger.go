@@ -50,6 +50,7 @@ func (h *HandlerPlus) Handle(r slog.Record) error {
 		// })
 		return err
 	}
+
 	ioWriter.Write(h.buffer.Bytes())
 	h.buffer.Reset()
 	h.ch <- nil
@@ -60,8 +61,8 @@ func (h *HandlerPlus) Handle(r slog.Record) error {
 func (h *HandlerPlus) WithAttrs(attr []slog.Attr) slog.Handler {
 	return &HandlerPlus{
 		Handler: h.Handler.WithAttrs(attr),
-		buffer:  bytes.NewBuffer(make([]byte, 10)),
-		outList: make(map[int][]io.Writer),
+		buffer:  h.buffer,
+		outList: h.outList,
 		ch:      h.ch,
 	}
 }
@@ -69,8 +70,8 @@ func (h *HandlerPlus) WithAttrs(attr []slog.Attr) slog.Handler {
 func (h *HandlerPlus) WithGroup(name string) slog.Handler {
 	return &HandlerPlus{
 		Handler: h.Handler.WithGroup(name),
-		buffer:  bytes.NewBuffer(make([]byte, 10)),
-		outList: make(map[int][]io.Writer),
+		buffer:  h.buffer,
+		outList: h.outList,
 		ch:      h.ch,
 	}
 }
@@ -96,7 +97,7 @@ func (h *HandlerPlus) AddOutFileForLevel(level Level, files ...string) error {
 func NewHandler(lt LogType, opts slog.HandlerOptions) *HandlerPlus {
 
 	handlerPlus := &HandlerPlus{
-		buffer:  bytes.NewBuffer(make([]byte, 10)),
+		buffer:  bytes.NewBuffer(make([]byte, 256)),
 		outList: make(map[int][]io.Writer),
 		ch:      make(chan interface{}, 1),
 	}
@@ -144,6 +145,7 @@ type Logger struct {
 	slog.Logger
 }
 
+// Create a usable logger, which is basically done using slog.new()
 func NewLogger(opts Options) *Logger {
 	return &Logger{
 		Logger: *slog.New(NewHandler(opts.Lt, slog.HandlerOptions{
@@ -167,5 +169,48 @@ func (l *Logger) AddOutFileForLevel(level Level, files ...string) (err error) {
 		return
 	}
 	err = nil
+	return
+}
+
+func (l *Logger) WithAttrs(attr []slog.Attr) (logger *Logger, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	rv := reflect.ValueOf(l.Logger.Handler())
+	rvHandler := rv.MethodByName("WithAttrs").Call([]reflect.Value{reflect.ValueOf(attr)})
+
+	handler, ok := rvHandler[0].Interface().(slog.Handler)
+	if !ok {
+		fmt.Printf("没有东西\n")
+	}
+
+	logger = &Logger{
+		Logger: *slog.New(
+			handler,
+		),
+	}
+
+	return
+}
+
+func (l *Logger) WithGroup(name string) (logger *Logger, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	rv := reflect.ValueOf(l.Logger.Handler())
+	rvHandler := rv.MethodByName("WithGroup").Call([]reflect.Value{reflect.ValueOf(name)})
+
+	logger = &Logger{
+		Logger: *slog.New(
+			rvHandler[0].Interface().(slog.Handler),
+		),
+	}
+
 	return
 }

@@ -3,3 +3,4 @@ Based on the logger library encapsulated by slog, logs of different levels are e
 
 ## Examples
 See `logger_test.go`
+> The ExampleLogger example is recommended
