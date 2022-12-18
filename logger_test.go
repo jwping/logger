@@ -9,7 +9,7 @@ func ExampleHandler() {
 		Level:     slog.LevelDebug,
 		AddSource: true,
 	})
-	err := handlerPlus.AddOutFileForLevel(slog.LevelInfo, "./output1.log", "./output2.log")
+	err := handlerPlus.AddOutFileForLevel(LevelInfo, "./output1.log", "./output2.log")
 	if err != nil {
 		return
 	}
@@ -28,7 +28,7 @@ func ExampleLogger() {
 		AddSource: true,
 	})
 
-	err := log.AddOutFileForLevel(slog.LevelInfo, "./output3.log", "./output4.log")
+	err := log.AddOutFileForLevel(LevelDebug, "./output3.log", "./output4.log")
 	if err != nil {
 		log.Error("AddOutFileForLevel faild", err)
 		return

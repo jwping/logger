@@ -21,7 +21,7 @@ type HandlerPlus struct {
 	slog.Handler
 
 	buffer  *bytes.Buffer
-	outList map[slog.Level][]io.Writer
+	outList map[int][]io.Writer
 	ch      chan interface{}
 }
 
@@ -36,8 +36,8 @@ func (h *HandlerPlus) Handle(r slog.Record) error {
 		stdWriter = os.Stdout
 	}
 
-	outList := make([]io.Writer, len(h.outList[r.Level]))
-	copy(outList, h.outList[r.Level])
+	outList := make([]io.Writer, len(h.outList[int(r.Level)]))
+	copy(outList, h.outList[int(r.Level)])
 	outList = append(outList, stdWriter)
 	ioWriter := io.MultiWriter(outList...)
 
@@ -61,7 +61,7 @@ func (h *HandlerPlus) WithAttrs(attr []slog.Attr) slog.Handler {
 	return &HandlerPlus{
 		Handler: h.Handler.WithAttrs(attr),
 		buffer:  bytes.NewBuffer(make([]byte, 10)),
-		outList: make(map[slog.Level][]io.Writer),
+		outList: make(map[int][]io.Writer),
 		ch:      h.ch,
 	}
 }
@@ -70,12 +70,12 @@ func (h *HandlerPlus) WithGroup(name string) slog.Handler {
 	return &HandlerPlus{
 		Handler: h.Handler.WithGroup(name),
 		buffer:  bytes.NewBuffer(make([]byte, 10)),
-		outList: make(map[slog.Level][]io.Writer),
+		outList: make(map[int][]io.Writer),
 		ch:      h.ch,
 	}
 }
 
-func (h *HandlerPlus) AddOutFileForLevel(level slog.Level, files ...string) error {
+func (h *HandlerPlus) AddOutFileForLevel(level Level, files ...string) error {
 	for _, file := range files {
 		fd, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
@@ -87,7 +87,7 @@ func (h *HandlerPlus) AddOutFileForLevel(level slog.Level, files ...string) erro
 			return err
 		}
 
-		h.outList[level] = append(h.outList[level], fd)
+		h.outList[int(level)] = append(h.outList[int(level)], fd)
 	}
 
 	return nil
@@ -97,7 +97,7 @@ func NewHandler(lt LogType, opts slog.HandlerOptions) *HandlerPlus {
 
 	handlerPlus := &HandlerPlus{
 		buffer:  bytes.NewBuffer(make([]byte, 10)),
-		outList: make(map[slog.Level][]io.Writer),
+		outList: make(map[int][]io.Writer),
 		ch:      make(chan interface{}, 1),
 	}
 
@@ -153,7 +153,7 @@ func NewLogger(opts Options) *Logger {
 	}
 }
 
-func (l *Logger) AddOutFileForLevel(level slog.Level, files ...string) (err error) {
+func (l *Logger) AddOutFileForLevel(level Level, files ...string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%v", r)
@@ -161,7 +161,7 @@ func (l *Logger) AddOutFileForLevel(level slog.Level, files ...string) (err erro
 	}()
 
 	rv := reflect.ValueOf(l.Logger.Handler())
-	rverr := rv.MethodByName("AddOutFileForLevel").CallSlice([]reflect.Value{reflect.ValueOf(slog.LevelInfo), reflect.ValueOf(files)})
+	rverr := rv.MethodByName("AddOutFileForLevel").CallSlice([]reflect.Value{reflect.ValueOf(level), reflect.ValueOf(files)})
 	err, ok := rverr[0].Interface().(error)
 	if ok {
 		return
