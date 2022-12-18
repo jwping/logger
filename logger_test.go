@@ -1,22 +1,40 @@
 package logger
 
-import "golang.org/x/exp/slog"
+import (
+	"golang.org/x/exp/slog"
+)
 
-// func TestNewLogger(t *testing.T) {
-// 	// fmt.Printf("试试测试\n")
-// 	logger := NewLogger(JSON, slog.HandlerOptions{})
-// 	logger.Info("测试输出")
-// }
-
-func Example() {
+func ExampleHandler() {
 	handlerPlus := NewHandler(JSON, slog.HandlerOptions{
 		Level:     slog.LevelDebug,
 		AddSource: true,
 	})
-	handlerPlus.AddOutFileForLevel(slog.LevelInfo, "./output1.log", "./output2.log")
-	logger := slog.New(handlerPlus)
+	err := handlerPlus.AddOutFileForLevel(slog.LevelInfo, "./output1.log", "./output2.log")
+	if err != nil {
+		return
+	}
 
-	logger.Info("Example success!")
+	log := slog.New(handlerPlus)
+
+	log.Info("ExampleHandler success!")
 	// Output:
-	// {"time":"xxxxxxx","level":"INFO","source":"/home/jwping/gopath/logger/logger_test.go:19","msg":"Example success!"}
+	// {"time":"xxxxxx","level":"INFO","source":"/home/jwping/gopath/logger/logger_test.go:19","msg":"Example success!"}
+}
+
+func ExampleLogger() {
+	log := NewLogger(Options{
+		Lt:        JSON,
+		Level:     LevelDebug,
+		AddSource: true,
+	})
+
+	err := log.AddOutFileForLevel(slog.LevelInfo, "./output3.log", "./output4.log")
+	if err != nil {
+		log.Error("AddOutFileForLevel faild", err)
+		return
+	}
+
+	log.Info("ExampleLogger success!")
+	// Output:
+	// {"time":"xxxxxx","level":"INFO","source":"/home/jwping/gopath/logger/logger_test.go:36","msg":"ExampleLogger success!"}
 }
